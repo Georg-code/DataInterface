@@ -1,53 +1,38 @@
+#![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use eframe::egui;
-use serialport::available_ports;
+// When compiling natively:
+#[cfg(not(target_arch = "wasm32"))]
+fn main() -> eframe::Result<()> {
+    // Log to stdout (if you run with `RUST_LOG=debug`).
+    tracing_subscriber::fmt::init();
 
-fn main() -> Result<(), eframe::Error> {
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
-    
-    
-
-    let options = eframe::NativeOptions {
-        initial_window_size: Some(egui::vec2(320.0, 240.0)),
-        ..Default::default()
-    };
-
-    eframe::run_simple_native("BoatData", options, move |ctx, _frame| {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let ports = serial_ports();
-
-            ui.heading("Maturaboot Interface");
-            ui.horizontal(|ui| {
-                ui.label("Serial Ports:");
-                ui.separator();
-                ui.label(format!("{}", ports.len()));
-            });
-            if ports.is_empty() {
-                ui.label("No serial ports found.");
-            } else {
-                for port in &ports {
-                    if ui.add(egui::Button::new(format!("{}", &port.port_name))).clicked() {
-                    println!("Clicked");
-                    }
-                }
-            }
-
-        });
-    })
+    let native_options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "Boat app cool",
+        native_options,
+        Box::new(|cc| Box::new(data_interface::BoatInterface::new(cc))),
+    )
 }
 
-fn serial_ports() -> Vec<serialport::SerialPortInfo>{
-    match available_ports() {
-        Ok(ports) => {
-            return ports;
-        }
-        Err(e) => {
-            eprintln!("Error listing serial ports: {}", e);
-            return Vec::new();
-        }
-     
-    }
+// when compiling to web using trunk.
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    // Make sure panics are logged using `console.error`.
+    console_error_panic_hook::set_once();
+
+    // Redirect tracing to console.log and friends:
+    tracing_wasm::set_as_global_default();
+
+    let web_options = eframe::WebOptions::default();
+
+    wasm_bindgen_futures::spawn_local(async {
+        eframe::start_web(
+            "the_canvas_id", // hardcode it
+            web_options,
+            Box::new(|cc| Box::new(data_interface::BoatInterface::new(cc))),
+        )
+        .await
+        .expect("failed to start eframe you suck");
+    });
 }
-
-
