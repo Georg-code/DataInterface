@@ -9,7 +9,7 @@ fn main() -> eframe::Result<()> {
 
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
-        "Boat app cool",
+        "Boat app cool2",
         native_options,
         Box::new(|cc| Box::new(data_interface::BoatInterface::new(cc))),
     )
